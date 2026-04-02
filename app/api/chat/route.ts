@@ -1,14 +1,32 @@
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@/app/generated/prisma/client'
 import { streamText, stepCountIs } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
+import { after } from 'next/server'
 import { buildContext } from '@/lib/ai/context'
 import { buildDiscoveryTools } from '@/lib/ai/tools'
 import { buildPlanReviewTools } from '@/lib/ai/tools-plan-review'
 import { buildPlanReviewSystemPrompt } from '@/lib/ai/plan-review'
+import { buildMemberContext } from '@/lib/ai/memory'
+import { buildMemberTools } from '@/lib/ai/tools-member'
 import type { UIMessage } from 'ai'
 
 export const runtime = 'nodejs'
+
+// ─── Confirmation detection ───────────────────────────────────────────────────
+
+const CONFIRMATION_WORDS = [
+  'yes', 'yep', 'yeah', 'ok', 'okay', 'sure', 'do it', 'confirmed',
+  'confirm', 'go ahead', 'please', 'sounds good', 'great',
+]
+
+function isConfirmation(text: string): boolean {
+  const lower = text.toLowerCase().trim()
+  return CONFIRMATION_WORDS.some(
+    (w) => lower === w || lower.startsWith(w + ' ') || lower.endsWith(' ' + w),
+  )
+}
 
 export async function POST(req: Request) {
   // 1. Auth check
@@ -85,6 +103,95 @@ export async function POST(req: Request) {
 
   // 6. streamText — select tools and system prompt by mode
   let planGenerationTriggered = false
+
+  // ─── Member-chat mode ──────────────────────────────────────────────────────
+  if (mode === 'member-chat') {
+    // Handle abandoned proposal: if pending proposal exists and message is not a confirmation, clear it
+    const currentThread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { pendingProposal: true },
+    })
+
+    let systemInjection = ''
+    if (currentThread?.pendingProposal != null && !isConfirmation(userMessageText)) {
+      // Clear the abandoned proposal
+      await prisma.thread.update({
+        where: { id: threadId },
+        data: { pendingProposal: Prisma.DbNull },
+      })
+      systemInjection =
+        '\n\n[SYSTEM NOTE: The previous pending proposal has been cancelled because the user sent a non-confirmation message. Acknowledge this briefly and move on.]'
+    }
+
+    const memberContext = await buildMemberContext(threadId, projectId, userId)
+    const memberTools = buildMemberTools(userId, projectId, threadId)
+
+    const memberResult = streamText({
+      model: anthropic('claude-sonnet-4-5'),
+      system: memberContext.systemPrompt + systemInjection,
+      messages: [
+        ...memberContext.messages,
+        ...(userMessageText
+          ? [{ role: 'user' as const, content: userMessageText }]
+          : []),
+      ],
+      tools: memberTools,
+      stopWhen: stepCountIs(5),
+      onFinish: async (event) => {
+        try {
+          if (userMessageText && lastIncoming) {
+            await prisma.message.create({
+              data: {
+                threadId,
+                role: 'user',
+                content: userMessageParts as object[],
+              },
+            })
+          }
+
+          const assistantContent = event.content
+          if (assistantContent && assistantContent.length > 0) {
+            await prisma.message.create({
+              data: {
+                threadId,
+                role: 'assistant',
+                content: assistantContent as unknown as object[],
+              },
+            })
+          }
+        } catch (err) {
+          console.error('[chat:member-chat] onFinish persistence error:', err)
+        }
+
+        // Post-response: trigger risk check if a task update was confirmed
+        const hadConfirmedUpdate = event.toolCalls?.some(
+          (tc) => tc.toolName === 'confirmTaskUpdate',
+        )
+
+        if (hadConfirmedUpdate) {
+          after(async () => {
+            try {
+              await fetch(
+                `${process.env.NEXTAUTH_URL}/api/projects/${projectId}/risk`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${process.env.AUTH_SECRET}`,
+                  },
+                },
+              )
+            } catch {
+              // Risk check is best-effort — ignore failures
+            }
+          })
+        }
+      },
+    })
+
+    return memberResult.toUIMessageStreamResponse()
+  }
+
+  // ─── Discovery / plan-review modes ────────────────────────────────────────
 
   let tools: ReturnType<typeof buildDiscoveryTools> | ReturnType<typeof buildPlanReviewTools>
   let effectiveSystemPrompt: string
