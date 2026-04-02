@@ -4,6 +4,8 @@ import { streamText, stepCountIs } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { buildContext } from '@/lib/ai/context'
 import { buildDiscoveryTools } from '@/lib/ai/tools'
+import { buildPlanReviewTools } from '@/lib/ai/tools-plan-review'
+import { buildPlanReviewSystemPrompt } from '@/lib/ai/plan-review'
 import type { UIMessage } from 'ai'
 
 export const runtime = 'nodejs'
@@ -81,14 +83,28 @@ export async function POST(req: Request) {
       : []),
   ]
 
-  // 6. streamText with discovery tools
+  // 6. streamText — select tools and system prompt by mode
   let planGenerationTriggered = false
 
-  const tools = mode === 'discovery' ? buildDiscoveryTools(projectId) : {}
+  let tools: ReturnType<typeof buildDiscoveryTools> | ReturnType<typeof buildPlanReviewTools>
+  let effectiveSystemPrompt: string
+
+  if (mode === 'plan-review') {
+    tools = buildPlanReviewTools(projectId)
+    const projectContext =
+      project.context != null && typeof project.context === 'object'
+        ? (project.context as Record<string, unknown>)
+        : null
+    effectiveSystemPrompt = buildPlanReviewSystemPrompt(project.plan, projectContext)
+  } else {
+    // discovery mode (default)
+    tools = buildDiscoveryTools(projectId)
+    effectiveSystemPrompt = systemPrompt
+  }
 
   const result = streamText({
     model: anthropic('claude-haiku-4-5'),
-    system: systemPrompt,
+    system: effectiveSystemPrompt,
     messages: messagesForModel,
     tools,
     stopWhen: stepCountIs(5),
