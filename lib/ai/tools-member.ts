@@ -2,6 +2,7 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import { Prisma } from '@/app/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
+import { getNextBestAction } from '@/lib/ai/recommendations'
 
 export function buildMemberTools(userId: string, projectId: string, threadId: string) {
   return {
@@ -219,6 +220,26 @@ export function buildMemberTools(userId: string, projectId: string, threadId: st
             dueDate: t.dueDate?.toISOString() ?? null,
             dependsOn: t.dependsOn,
           })),
+        }
+      },
+    }),
+
+    getRecommendation: tool({
+      description: 'Get a prioritized recommendation for what this team member should work on next.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const result = await getNextBestAction(userId, projectId)
+        if (!result.task) {
+          return { message: result.reason }
+        }
+        return {
+          task: {
+            id: result.task.id,
+            title: result.task.title,
+            priority: result.task.priority,
+            status: result.task.status,
+          },
+          reason: result.reason,
         }
       },
     }),

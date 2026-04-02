@@ -53,13 +53,34 @@ export async function buildMemberChatSystemPrompt(
         })
         .join('\n')
 
-  const risks = Array.isArray(projectContext.risks)
-    ? (projectContext.risks as string[])
-    : []
+  interface RiskFlag {
+    milestoneTitle: string
+    targetDate: string | Date
+    gap: number
+  }
 
-  const risksText = risks.length === 0
-    ? ''
-    : `\n### Active risk flags\n${risks.map((r) => `- ${r}`).join('\n')}`
+  const rawRisks = Array.isArray(projectContext.risks) ? projectContext.risks : []
+  const risks: RiskFlag[] = rawRisks
+    .filter(
+      (r): r is RiskFlag =>
+        r !== null &&
+        typeof r === 'object' &&
+        typeof (r as Record<string, unknown>).milestoneTitle === 'string',
+    )
+    .map((r) => r as RiskFlag)
+
+  const risksText =
+    risks.length === 0
+      ? ''
+      : `\n## Active Risk Flags\n${risks
+          .map((r) => {
+            const dateStr =
+              r.targetDate instanceof Date
+                ? r.targetDate.toISOString().split('T')[0]
+                : String(r.targetDate).split('T')[0]
+            return `- ${r.milestoneTitle} (due ${dateStr}, gap: ${Math.round(r.gap * 100)}% behind schedule)`
+          })
+          .join('\n')}\n→ Open your session by mentioning these risks and asking the user if they can help address them.`
 
   const projectState = `## Project state (loaded fresh this request)
 Project: ${project.name} [${project.status}]

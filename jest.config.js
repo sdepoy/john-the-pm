@@ -4,7 +4,11 @@ module.exports = {
     {
       displayName: "node",
       testEnvironment: "node",
-      testMatch: ["**/__tests__/realtime/sse.test.ts"],
+      testMatch: [
+        "**/__tests__/realtime/sse.test.ts",
+        "**/__tests__/ai/**/*.test.ts",
+        "**/__tests__/api/**/*.test.ts",
+      ],
       transform: {
         "^.+\\.tsx?$": ["ts-jest", { tsconfig: { strict: true } }],
       },
