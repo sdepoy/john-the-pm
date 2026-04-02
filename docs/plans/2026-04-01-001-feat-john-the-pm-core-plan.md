@@ -1,7 +1,7 @@
 ---
 title: "feat: John the PM — Core Application"
 type: feat
-status: active
+status: complete
 date: 2026-04-01
 origin: docs/brainstorms/2026-04-01-vibe-pm-requirements.md
 deepened: 2026-04-01
@@ -251,7 +251,7 @@ flowchart TB
 
 ## Implementation Units
 
-- [ ] **Unit 1: Foundation — Project Scaffold + Database Schema**
+- [x] **Unit 1: Foundation — Project Scaffold + Database Schema**
 
 **Goal:** Working Next.js 15 app with full database schema, Prisma client, and environment config. All subsequent units build on this.
 
@@ -294,7 +294,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 2: Authentication — Magic Links + Team Creation + Member Invitation**
+- [x] **Unit 2: Authentication — Magic Links + Team Creation + Member Invitation**
 
 **Goal:** Users can sign up via magic link, create a team (becoming admin), invite members by email, and members can join via invitation link.
 
@@ -345,7 +345,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 3: Discovery Interview — PM Discovery Conversation + Plan Generation**
+- [x] **Unit 3: Discovery Interview — PM Discovery Conversation + Plan Generation**
 
 **Goal:** Admin can start a PM discovery interview with John. John follows a layered question sequence, builds structured project context, and generates a draft project plan (milestones, tasks, dependencies, RICE scores) using Claude structured output.
 
@@ -397,7 +397,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 4: Plan Approval — Admin Review Loop + Publication**
+- [x] **Unit 4: Plan Approval — Admin Review Loop + Publication**
 
 **Goal:** Admin can review John's draft plan, request revisions via chat, and explicitly approve to publish the plan to the team.
 
@@ -409,7 +409,7 @@ flowchart TB
 - Create: `app/(app)/plan-review/page.tsx` (plan review UI — shows plan + chat with John for revisions)
 - Create: `lib/ai/plan-review.ts` (plan review system prompt — John in "plan editor" mode)
 - Modify: `app/api/chat/route.ts` (add `mode: 'plan-review'` branch — different system prompt, different tools)
-- Create: `app/api/projects/[id]/approve/route.ts` (POST: admin approves plan → status: active, assigns tasks, notifies members)
+- Create: `app/api/projects/[id]/approve/route.ts` (POST: admin approves plan → status: complete, assigns tasks, notifies members)
 - Create: `app/actions/projects.ts` (Server Actions: approvePlan, rejectPlan)
 - Test: `__tests__/api/plan-approval.test.ts`
 
@@ -445,7 +445,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 5: 1:1 Chat with John — Ongoing Conversation, Context Management, Write Confirmation**
+- [x] **Unit 5: 1:1 Chat with John — Ongoing Conversation, Context Management, Write Confirmation**
 
 **Goal:** Each team member has a persistent 1:1 conversation with John. John maintains context across sessions using a summary buffer, recommends work, and confirms all writes to shared state before executing.
 
@@ -499,7 +499,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 6: Recommendations Engine — Next Best Action + Milestone Risk Detection**
+- [x] **Unit 6: Recommendations Engine — Next Best Action + Milestone Risk Detection**
 
 **Goal:** John gives each member a prioritized, dependency-aware recommendation for what to work on next. John proactively identifies milestone risk and surfaces flags at the start of each team member's next session.
 
@@ -543,7 +543,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 7: Real-time Infrastructure — SSE + Postgres LISTEN/NOTIFY**
+- [x] **Unit 7: Real-time Infrastructure — SSE + Postgres LISTEN/NOTIFY**
 
 **Goal:** A persistent Postgres listener broadcasts project state changes via SSE to all connected clients. The shared project view updates without manual refresh.
 
@@ -586,7 +586,7 @@ flowchart TB
 
 ---
 
-- [ ] **Unit 8: Shared Project View + Standup Digest**
+- [x] **Unit 8: Shared Project View + Standup Digest**
 
 **Goal:** A read-only dashboard shows the team's project health, milestone status, who owns what, and what's in progress. John generates on-demand status summaries and standup-style digests.
 
