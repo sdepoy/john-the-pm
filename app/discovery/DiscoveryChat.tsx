@@ -94,7 +94,10 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
         const res = await fetch(`/api/projects/${projectId}`)
         if (!res.ok) return
         const data = await res.json()
-        if (data.status === 'draft' || data.status === 'active') {
+        if (data.status === 'draft') {
+          clearInterval(interval)
+          router.push('/plan-review')
+        } else if (data.status === 'active') {
           clearInterval(interval)
           router.push('/project')
         }
