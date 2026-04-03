@@ -75,7 +75,11 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
   useEffect(() => {
     for (const msg of messages) {
       for (const part of msg.parts) {
-        if (part.type === 'tool-invocation' && 'toolName' in part && part.toolName === 'proposePlanGeneration') {
+        if (
+          part.type === 'tool-invocation' &&
+          'toolInvocation' in part &&
+          (part as { type: string; toolInvocation: { toolName: string } }).toolInvocation.toolName === 'proposePlanGeneration'
+        ) {
           setIsGeneratingPlan(true)
         }
       }
