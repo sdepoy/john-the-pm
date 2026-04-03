@@ -30,12 +30,7 @@ export async function buildContext(
   })
 
   // Build system prompt
-  const projectContext =
-    project.context != null && typeof project.context === 'object'
-      ? (project.context as Record<string, unknown>)
-      : null
-
-  let systemPrompt = buildDiscoverySystemPrompt(projectContext)
+  let systemPrompt = buildDiscoverySystemPrompt()
 
   // Prepend thread summary if available
   if (thread.summary) {
