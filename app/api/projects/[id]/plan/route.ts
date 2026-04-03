@@ -38,75 +38,49 @@ export async function POST(
     )
   }
 
-  const context =
-    project.context != null && typeof project.context === 'object'
-      ? (project.context as Record<string, unknown>)
-      : {}
+  // Load discovery conversation from all threads for this project
+  const threads = await prisma.thread.findMany({
+    where: { projectId },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
 
-  const completedLayers = Array.isArray(context.completedLayers)
-    ? context.completedLayers
-    : []
-  const discoveredTasks = Array.isArray(context.discoveredTasks)
-    ? context.discoveredTasks
-    : []
-  const discoveredMilestones = Array.isArray(context.discoveredMilestones)
-    ? context.discoveredMilestones
-    : []
+  const conversationLines: string[] = []
+  for (const thread of threads) {
+    for (const msg of thread.messages) {
+      const parts = Array.isArray(msg.content)
+        ? (msg.content as Array<{ type: string; text?: string }>)
+        : []
+      const text = parts
+        .filter((p) => p.type === 'text' && typeof p.text === 'string')
+        .map((p) => p.text as string)
+        .join(' ')
+        .trim()
+      if (text) {
+        conversationLines.push(`${msg.role.toUpperCase()}: ${text}`)
+      }
+    }
+  }
 
-  const discoveryTranscript = `
-Project: ${project.name}
-Objective: ${project.objective ?? 'Not specified'}
+  const conversationTranscript = conversationLines.length > 0
+    ? conversationLines.join('\n\n')
+    : 'No conversation transcript available.'
 
-## Discovery Layer Summaries
-${(completedLayers as Array<{ layerId: string; summary: string }>)
-  .map((l) => `### ${l.layerId}\n${l.summary}`)
-  .join('\n\n')}
+  const discoveryTranscript = `Project: ${project.name}
 
-## Discovered Tasks
-${
-  discoveredTasks.length === 0
-    ? 'None captured yet.'
-    : (
-        discoveredTasks as Array<{
-          title: string
-          description: string
-          priority: string
-          milestoneHint?: string
-        }>
-      )
-        .map(
-          (t) =>
-            `- [${t.priority}] ${t.title}: ${t.description}${t.milestoneHint ? ` (milestone: ${t.milestoneHint})` : ''}`,
-        )
-        .join('\n')
-}
-
-## Discovered Milestones
-${
-  discoveredMilestones.length === 0
-    ? 'None captured yet.'
-    : (
-        discoveredMilestones as Array<{
-          title: string
-          targetDate?: string
-          successCriteria?: string
-        }>
-      )
-        .map(
-          (m) =>
-            `- ${m.title}${m.targetDate ? ` (target: ${m.targetDate})` : ''}${m.successCriteria ? `\n  Success: ${m.successCriteria}` : ''}`,
-        )
-        .join('\n')
-}
-`.trim()
+## Discovery Conversation
+${conversationTranscript}`.trim()
 
   const result = await generateText({
     model: anthropic('claude-sonnet-4-6'),
     output: Output.object({ schema: ProjectPlanSchema }),
-    system: `You are an expert product manager. Given the discovery interview transcript below, generate a comprehensive project plan in the exact JSON structure requested.
+    system: `You are an expert product manager. Given the discovery conversation below, generate a comprehensive project plan in the exact JSON structure requested.
 
 Be specific and concrete. Derive milestones and tasks directly from what was discussed.
-Infer task priorities yourself based on dependencies, complexity, and what must ship first — do not require the user to have stated priorities explicitly.
+Infer task priorities yourself based on dependencies, complexity, and what must ship first.
 If any information is missing or ambiguous, make reasonable PM assumptions and note them in openRisks.
 Today's date is ${new Date().toISOString().split('T')[0]}.`,
     prompt: discoveryTranscript,
