@@ -241,6 +241,8 @@ export async function POST(req: Request) {
         }
 
         // Check if proposePlanGeneration was called
+        console.log('[chat] onFinish toolCalls:', JSON.stringify(event.toolCalls?.map(tc => tc.toolName)))
+
         const hadPlanProposal = event.toolCalls?.some(
           (tc) => tc.toolName === 'proposePlanGeneration',
         )
