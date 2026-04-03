@@ -21,12 +21,6 @@ export const DISCOVERY_LAYERS = [
     depthSignal: 'Has clear boundaries: what will and will not be built',
   },
   {
-    id: 'prioritization',
-    name: 'Prioritization',
-    prompt: 'Understand which features are must-have for launch vs. nice-to-have',
-    depthSignal: 'Has any indication of what must ship first',
-  },
-  {
     id: 'constraints',
     name: 'Constraints & Dependencies',
     prompt:

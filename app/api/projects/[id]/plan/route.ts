@@ -105,8 +105,9 @@ ${
     output: Output.object({ schema: ProjectPlanSchema }),
     system: `You are an expert product manager. Given the discovery interview transcript below, generate a comprehensive project plan in the exact JSON structure requested.
 
-Be specific and concrete. Derive milestones, tasks, priorities, and risks directly from what was discussed.
-If any information is missing or ambiguous, make reasonable PM assumptions and note them in openRisks or nextDiscoveryQuestions.
+Be specific and concrete. Derive milestones and tasks directly from what was discussed.
+Infer task priorities yourself based on dependencies, complexity, and what must ship first — do not require the user to have stated priorities explicitly.
+If any information is missing or ambiguous, make reasonable PM assumptions and note them in openRisks.
 Today's date is ${new Date().toISOString().split('T')[0]}.`,
     prompt: discoveryTranscript,
   })
