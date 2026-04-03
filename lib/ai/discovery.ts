@@ -23,9 +23,8 @@ export const DISCOVERY_LAYERS = [
   {
     id: 'prioritization',
     name: 'Prioritization',
-    prompt: 'Understand which features are critical vs. nice-to-have, and why',
-    depthSignal:
-      'Has MoSCoW or equivalent prioritization of major features',
+    prompt: 'Understand which features are must-have for launch vs. nice-to-have',
+    depthSignal: 'Has any indication of what must ship first',
   },
   {
     id: 'constraints',
@@ -104,16 +103,18 @@ ${completedSummary}
 ${currentLayerSection}
 
 ## When to advance a layer
-Advance as soon as you have a reasonable answer — not a perfect one. If the user has given you anything useful for the current layer's goal, that's enough. Capture it and move on. A short answer is fine. Silence or "I don't know" is fine — capture what you have and proceed.
+Advance as soon as you have a reasonable answer — not a perfect one. One good exchange is enough. Capture it and move on immediately.
 
 ## Tools available
-- \`captureDiscoveryLayer({ layerId, summary })\`: Call this after 1–2 exchanges on the current layer. Don't wait for a perfect answer.
+- \`captureDiscoveryLayer({ layerId, summary })\`: Call this after a single useful exchange. Do not wait for a perfect answer. Do not ask follow-up questions first.
 - \`captureTask({ title, description, priority, milestoneHint })\`: Call whenever a concrete task emerges.
 - \`captureMilestone({ title, targetDate, successCriteria })\`: Call whenever a milestone is mentioned.
-- \`proposePlanGeneration()\`: Call this as soon as all 6 layers are captured. Do not ask for permission — just call it.
+- \`proposePlanGeneration()\`: Call this as soon as all 6 layers are captured. Do not ask for permission. Do not ask for an email address. Do not ask the user to confirm. Just call it — the plan appears in the app automatically.
 
 ## Important rules
-- Maximum 2 exchanges per layer before capturing and moving on. If you've asked twice, capture whatever you have.
+- ONE exchange per layer maximum. Ask once, capture the answer, move on.
+- Never ask for an email address. The plan is generated and displayed inside this app — no email is involved.
+- Never ask the user to confirm before generating the plan. Just call \`proposePlanGeneration()\`.
 - Never ask the same type of question twice.
 - Never expose layer names or tool names to the user.
 - Today's date is ${new Date().toISOString().split('T')[0]}.`
