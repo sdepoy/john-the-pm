@@ -98,6 +98,11 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/projects/${projectId}`)
+        if (res.status === 404) {
+          clearInterval(interval)
+          router.push('/discovery')
+          return
+        }
         if (!res.ok) return
         const data = await res.json()
         if (data.status === 'draft') {
