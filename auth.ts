@@ -12,7 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Resend({
       apiKey: process.env.AUTH_RESEND_KEY,
-      from: process.env.EMAIL_FROM ?? "John the PM <noreply@johnthepm.app>",
+      from: process.env.RESEND_FROM_EMAIL ?? "John the PM <noreply@johnthepm.app>",
     }),
   ],
   callbacks: {

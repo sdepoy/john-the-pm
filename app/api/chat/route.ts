@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     const memberTools = buildMemberTools(userId, projectId, threadId)
 
     const memberResult = streamText({
-      model: anthropic('claude-sonnet-4-5'),
+      model: anthropic('claude-sonnet-4-6'),
       system: memberContext.systemPrompt + systemInjection,
       messages: [
         ...memberContext.messages,
@@ -210,7 +210,7 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: anthropic('claude-haiku-4-5'),
+    model: anthropic('claude-sonnet-4-6'),
     system: effectiveSystemPrompt,
     messages: messagesForModel,
     tools,

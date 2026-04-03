@@ -135,7 +135,7 @@ export async function maybeCondense(threadId: string): Promise<void> {
 
   // Call Claude Haiku to summarize
   const { text: summary } = await generateText({
-    model: anthropic('claude-haiku-4-5'),
+    model: anthropic('claude-haiku-4-5-20251001'),
     prompt: `Summarize this conversation. Focus on decisions made, blockers reported, and task updates agreed upon. Do NOT include project state facts like milestone status or task assignments — those are reloaded fresh from the database. Be concise.\n\n${conversationText}`,
   })
 
