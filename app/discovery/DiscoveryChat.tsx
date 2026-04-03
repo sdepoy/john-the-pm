@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import type { UIMessage } from 'ai'
@@ -62,6 +63,7 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [inputValue, setInputValue] = useState('')
+  const router = useRouter()
 
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
@@ -83,6 +85,25 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Poll for plan readiness after proposePlanGeneration fires
+  useEffect(() => {
+    if (!isGeneratingPlan) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.status === 'draft' || data.status === 'active') {
+          clearInterval(interval)
+          router.push('/project')
+        }
+      } catch {
+        // ignore transient fetch errors, keep polling
+      }
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [isGeneratingPlan, projectId, router])
 
   const handleSend = () => {
     const text = inputValue.trim()
