@@ -52,5 +52,5 @@ export default async function DiscoveryPage() {
     })
   }
 
-  return <DiscoveryChat projectId={project.id} threadId={thread.id} />
+  return <DiscoveryChat key={project.id} projectId={project.id} threadId={thread.id} />
 }
