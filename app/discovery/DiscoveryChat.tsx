@@ -53,7 +53,7 @@ function GeneratingOverlay() {
           ))}
         </div>
         <p className="text-base font-semibold text-gray-800">Generating your project plan…</p>
-        <p className="text-sm text-gray-500 mt-1">John is turning your session into a full plan.</p>
+        <p className="text-sm text-gray-500 mt-1">This usually takes 10–20 seconds.</p>
       </div>
     </div>
   )
@@ -72,25 +72,27 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
     }),
   })
 
+  // When stream ends, check if plan generation was triggered
   useEffect(() => {
-    for (const msg of messages) {
-      for (const part of msg.parts) {
-        if (
-          part.type === 'tool-invocation' &&
-          'toolInvocation' in part &&
-          (part as { type: string; toolInvocation: { toolName: string } }).toolInvocation.toolName === 'proposePlanGeneration'
-        ) {
-          setIsGeneratingPlan(true)
-        }
-      }
-    }
-  }, [messages])
+    if (status !== 'ready') return
+    if (isGeneratingPlan) return
+
+    // Check project status — if 'generating', plan generation is in flight
+    fetch(`/api/projects/${projectId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.status === 'generating') setIsGeneratingPlan(true)
+        if (data.status === 'draft') router.push('/plan-review')
+        if (data.status === 'active') router.push('/project')
+      })
+      .catch(() => {/* ignore */})
+  }, [status, projectId, isGeneratingPlan, router])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Poll for plan readiness after proposePlanGeneration fires
+  // Poll for plan readiness while generating
   useEffect(() => {
     if (!isGeneratingPlan) return
     const interval = setInterval(async () => {
@@ -168,7 +170,7 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-lg font-bold mb-3">J</div>
                 <p className="text-gray-700 font-medium">Hi, I'm John — your AI PM.</p>
-                <p className="text-gray-400 text-sm mt-1 max-w-sm">Tell me what you want to build and I'll ask a few questions to put together a project plan.</p>
+                <p className="text-gray-400 text-sm mt-1 max-w-sm">Tell me what you want to build and I'll turn it into a project plan.</p>
               </div>
             )}
             {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
@@ -200,11 +202,14 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
         </div>
       </main>
 
-      {/* ── Right panel (reserved for future context/status) ─── */}
+      {/* ── Right panel ─── */}
       <aside className="w-64 flex-shrink-0 bg-white border-l border-gray-200 hidden xl:flex flex-col py-5 px-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Discovery progress</p>
-        <div className="space-y-2 text-sm text-gray-500">
-          <p className="text-gray-400 text-xs">Layers captured will appear here as John works through the interview.</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Status</p>
+        <div className="text-sm text-gray-500">
+          {isGeneratingPlan
+            ? <p className="text-indigo-600 font-medium">Generating plan…</p>
+            : <p className="text-gray-400 text-xs">Your plan will appear here once generated.</p>
+          }
         </div>
       </aside>
     </div>
