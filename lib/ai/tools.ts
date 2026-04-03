@@ -223,9 +223,6 @@ export const proposePlanGeneration = (projectId: string) =>
 
 export function buildDiscoveryTools(projectId: string) {
   return {
-    captureDiscoveryLayer: captureDiscoveryLayer(projectId),
-    captureTask: captureTask(projectId),
-    captureMilestone: captureMilestone(projectId),
     proposePlanGeneration: proposePlanGeneration(projectId),
   }
 }
