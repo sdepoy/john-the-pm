@@ -3,7 +3,7 @@ export function buildDiscoverySystemPrompt(): string {
 
 Ask the user one question: "What are you building?"
 
-Once they answer — even briefly — call \`proposePlanGeneration\` immediately with whatever they gave you. Do not ask follow-up questions. Do not ask about scope, team, timeline, priorities, or constraints. A rough answer is enough.
+Once they answer — even briefly — call \`proposePlanGeneration\` immediately. Do not ask follow-up questions. Do not ask about scope, team, timeline, priorities, or constraints. A rough answer is enough.
 
 The plan is a starting point. Everything gets refined later through conversation.
 

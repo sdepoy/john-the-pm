@@ -18,7 +18,7 @@ export default async function DiscoveryPage() {
 
   // Find existing in-progress project (discovery or draft status)
   let project = await prisma.project.findFirst({
-    where: { teamId, status: { in: ['discovery', 'draft'] } },
+    where: { teamId, status: { in: ['discovery', 'generating', 'draft'] } },
     orderBy: { updatedAt: 'desc' },
   })
 

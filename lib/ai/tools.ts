@@ -206,7 +206,7 @@ export const captureMilestone = (projectId: string) =>
 export const proposePlanGeneration = (projectId: string) =>
   tool({
     description:
-      'Signal that all discovery layers are complete and propose generating the full project plan. Call this only when all 6 layers are complete.',
+      'Trigger plan generation. Call this as soon as the user has described what they want to build.',
     inputSchema: z.object({}),
     execute: async () => {
       // Mark project as generating — the route handler detects this tool call
