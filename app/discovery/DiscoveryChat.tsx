@@ -197,7 +197,7 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
             }
             disabled={status === 'streaming' || isGeneratingPlan}
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 max-h-32 overflow-y-auto"
+            className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 max-h-32 overflow-y-auto"
             style={{ minHeight: '48px' }}
           />
           <button
