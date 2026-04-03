@@ -254,12 +254,18 @@ export async function POST(req: Request) {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                // Pass auth cookie so the internal request is authenticated
                 Cookie: req.headers.get('cookie') ?? '',
               },
             },
-          ).catch((err) => {
-            console.error('[chat] plan generation fire-and-forget failed:', err)
+          ).then(async (r) => {
+            if (!r.ok) {
+              const body = await r.text()
+              console.error(`[chat] plan generation failed: ${r.status} ${body}`)
+            } else {
+              console.log('[chat] plan generation succeeded')
+            }
+          }).catch((err) => {
+            console.error('[chat] plan generation fetch error:', err)
           })
         }
       } catch (err) {
