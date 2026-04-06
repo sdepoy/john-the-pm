@@ -82,7 +82,6 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
       .then((r) => r.json())
       .then((data) => {
         if (data.status === 'generating') setIsGeneratingPlan(true)
-        if (data.status === 'draft') router.push('/plan-review')
         if (data.status === 'active') router.push('/project')
       })
       .catch(() => {/* ignore */})
@@ -105,10 +104,7 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
         }
         if (!res.ok) return
         const data = await res.json()
-        if (data.status === 'draft') {
-          clearInterval(interval)
-          router.push('/plan-review')
-        } else if (data.status === 'active') {
+        if (data.status === 'active') {
           clearInterval(interval)
           router.push('/project')
         }
