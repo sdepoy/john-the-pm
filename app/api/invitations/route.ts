@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   const baseUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-  const inviteLink = `${baseUrl}/onboarding?token=${rawToken}`;
+  const inviteLink = `${baseUrl}/onboarding`;
 
   const resend = new Resend(resendKey);
   const { error: emailError } = await resend.emails.send({
