@@ -4,6 +4,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { PrismaClient } from "@/app/generated/prisma/client";
 
+const isDev = process.env.NODE_ENV === "development";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma as unknown as PrismaClient),
   session: {
@@ -13,6 +15,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Resend({
       apiKey: process.env.AUTH_RESEND_KEY,
       from: process.env.RESEND_FROM_EMAIL ?? "John the PM <noreply@johnthepm.app>",
+      ...(isDev && {
+        sendVerificationRequest({ url, identifier }) {
+          console.log(`\n\n🔗 MAGIC LINK for ${identifier}:\n${url}\n\n`);
+        },
+      }),
     }),
   ],
   callbacks: {

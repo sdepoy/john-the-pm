@@ -206,8 +206,10 @@ export const captureMilestone = (projectId: string) =>
 export const proposePlanGeneration = (projectId: string) =>
   tool({
     description:
-      'Trigger plan generation. Call this as soon as the user has described what they want to build.',
-    inputSchema: z.object({}),
+      'Trigger plan generation. Call this ONLY after the user has explicitly confirmed your one-sentence summary of their idea. Do not call before receiving confirmation.',
+    inputSchema: z.object({
+      confirmedDescription: z.string().describe('The exact one-sentence summary the user confirmed'),
+    }),
     execute: async () => {
       // Mark project as generating — the route handler detects this tool call
       // and triggers actual plan generation asynchronously

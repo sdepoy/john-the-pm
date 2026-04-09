@@ -9,28 +9,13 @@ export function buildPlanReviewSystemPrompt(
   const planSummary = typedPlan
     ? `## Current Plan: ${typedPlan.name}
 Objective: ${typedPlan.objective}
-Confidence: ${Math.round((typedPlan.confidence ?? 0.8) * 100)}%
-
 ### Milestones (${typedPlan.milestones.length})
 ${typedPlan.milestones
   .map(
     (m, i) => `${i + 1}. **${m.title}**${m.targetDate ? ` — target: ${m.targetDate}` : ''} [${m.status}]
    Tasks (${m.tasks.length}): ${m.tasks.map((t) => `${t.title} [${t.priority}]`).join(', ') || 'none'}`,
   )
-  .join('\n')}
-
-### Open Risks
-${typedPlan.openRisks?.length ? typedPlan.openRisks.map((r) => `- ${r}`).join('\n') : 'None'}
-
-### MoSCoW Summary
-${
-  typedPlan.moscowSummary
-    ? `Must: ${typedPlan.moscowSummary.must.join(', ') || 'none'}
-Should: ${typedPlan.moscowSummary.should.join(', ') || 'none'}
-Could: ${typedPlan.moscowSummary.could.join(', ') || 'none'}
-Won't: ${typedPlan.moscowSummary.wont.join(', ') || 'none'}`
-    : 'Not specified'
-}`
+  .join('\n')}`
     : 'No plan has been generated yet.'
 
   const contextNote =

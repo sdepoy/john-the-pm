@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Task } from "@/hooks/useProjectStream";
 
 interface Milestone {
@@ -68,6 +69,66 @@ function formatDate(iso: string | null): string {
   });
 }
 
+function assigneeInitials(assignee: { name: string | null; email: string } | null): string {
+  if (!assignee) return "";
+  const source = assignee.name ?? assignee.email;
+  const parts = source.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return source.slice(0, 2).toUpperCase();
+}
+
+// Deterministic color from name so the same person always gets the same color
+const AVATAR_COLORS = [
+  "bg-violet-200 text-violet-800",
+  "bg-blue-200 text-blue-800",
+  "bg-emerald-200 text-emerald-800",
+  "bg-amber-200 text-amber-800",
+  "bg-rose-200 text-rose-800",
+  "bg-sky-200 text-sky-800",
+  "bg-orange-200 text-orange-800",
+];
+
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function TaskRow({ task }: { task: Task }) {
+  const [expanded, setExpanded] = useState(false);
+  const chip = taskStatusChip(task.status);
+  const dot = priorityDot(task.priority);
+  const assigneeName = task.assignee?.name ?? task.assignee?.email ?? "";
+  const initials = assigneeInitials(task.assignee);
+  const colorClass = assigneeName ? avatarColor(assigneeName) : "";
+
+  return (
+    <li className="space-y-0.5">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-2 text-sm text-left rounded px-1 -mx-1 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1 transition-colors"
+      >
+        <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} title={`Priority: ${task.priority}`} />
+        <span className={`flex-1 text-gray-800 ${expanded ? "" : "truncate"}`}>{task.title}</span>
+        <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${chip.className}`}>
+          {chip.label}
+        </span>
+        {task.assignee && (
+          <span
+            className={`shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold ${colorClass}`}
+            title={assigneeName}
+          >
+            {initials}
+          </span>
+        )}
+      </button>
+      {expanded && task.description && (
+        <p className="pl-4 text-xs text-gray-500 leading-relaxed">{task.description}</p>
+      )}
+    </li>
+  );
+}
+
 export default function MilestoneCard({ milestone }: MilestoneCardProps) {
   const badge = milestoneStatusBadge(milestone.status);
   const totalTasks = milestone.tasks.length;
@@ -104,26 +165,9 @@ export default function MilestoneCard({ milestone }: MilestoneCardProps) {
         <p className="text-xs text-gray-400">No tasks yet.</p>
       ) : (
         <ul className="space-y-2">
-          {milestone.tasks.map((task) => {
-            const chip = taskStatusChip(task.status);
-            const dot = priorityDot(task.priority);
-            const assigneeName =
-              task.assignee?.name ?? task.assignee?.email ?? "Unassigned";
-            return (
-              <li key={task.id} className="flex items-center gap-2 text-sm">
-                {/* Priority dot */}
-                <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} title={`Priority: ${task.priority}`} />
-                {/* Title */}
-                <span className="flex-1 truncate text-gray-800">{task.title}</span>
-                {/* Status chip */}
-                <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${chip.className}`}>
-                  {chip.label}
-                </span>
-                {/* Assignee */}
-                <span className="shrink-0 text-xs text-gray-400 truncate max-w-[80px]">{assigneeName}</span>
-              </li>
-            );
-          })}
+          {milestone.tasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
         </ul>
       )}
     </div>

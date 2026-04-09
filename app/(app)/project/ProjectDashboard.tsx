@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useProjectStream, type ProjectState, type Task } from "@/hooks/useProjectStream";
 import MilestoneCard from "./MilestoneCard";
 import TeamMemberStatus from "./TeamMemberStatus";
+import ChatPanel from "./ChatPanel";
+import InviteModal from "./InviteModal";
+import type { UIMessage } from "ai";
 
 interface ProjectDashboardProps {
   projectId: string;
   initialData: ProjectState;
   isAdmin: boolean;
+  threadId: string;
+  initialMessages: UIMessage[];
+  userName: string;
 }
 
 function statusBadge(status: string): { label: string; className: string } {
@@ -29,9 +34,14 @@ export default function ProjectDashboard({
   projectId,
   initialData,
   isAdmin,
+  threadId,
+  initialMessages,
+  userName,
 }: ProjectDashboardProps) {
   const { data, connected } = useProjectStream(projectId, initialData);
 
+  const [chatOpen, setChatOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [digestLoading, setDigestLoading] = useState(false);
   const [digest, setDigest] = useState<string | null>(null);
   const [digestError, setDigestError] = useState<string | null>(null);
@@ -83,10 +93,13 @@ export default function ProjectDashboard({
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      {/* ── Main content ── */}
+      <div className={`flex flex-col flex-1 min-w-0 overflow-y-auto transition-all duration-300`}>
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="mx-auto max-w-5xl flex items-center justify-between gap-4">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-gray-900">{data.name}</h1>
             <span
@@ -100,25 +113,37 @@ export default function ProjectDashboard({
           </div>
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <button
-                onClick={handleGenerateDigest}
-                disabled={digestLoading}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-              >
-                {digestLoading ? "Generating…" : "Generate Digest"}
-              </button>
+              <>
+                <button
+                  onClick={() => setInviteOpen(true)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Invite member
+                </button>
+                <button
+                  onClick={handleGenerateDigest}
+                  disabled={digestLoading}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  {digestLoading ? "Generating…" : "Generate Digest"}
+                </button>
+              </>
             )}
-            <Link
-              href="/chat"
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            <button
+              onClick={() => setChatOpen((v) => !v)}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 transition-colors ${
+                chatOpen
+                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
             >
-              Chat with John
-            </Link>
+              {chatOpen ? "Close chat" : "Chat with John"}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-6 py-6 space-y-6">
+      <div className="mx-auto max-w-5xl w-full px-6 py-6 space-y-6">
         {/* Risk flag banner */}
         {hasRisks && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-3">
@@ -147,13 +172,27 @@ export default function ProjectDashboard({
         )}
 
         {/* Digest panel */}
-        {digestOpen && digest && (
+        {digestLoading && (
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-4 animate-pulse">
+            <div className="h-3.5 w-32 rounded bg-indigo-200 mb-4" />
+            <div className="space-y-2">
+              <div className="h-2.5 w-full rounded bg-indigo-200" />
+              <div className="h-2.5 w-5/6 rounded bg-indigo-200" />
+              <div className="h-2.5 w-4/6 rounded bg-indigo-200" />
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="h-2.5 w-full rounded bg-indigo-200" />
+              <div className="h-2.5 w-3/4 rounded bg-indigo-200" />
+            </div>
+          </div>
+        )}
+        {digestOpen && digest && !digestLoading && (
           <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-indigo-800">Standup Digest</h2>
               <button
                 onClick={() => setDigestOpen(false)}
-                className="text-xs text-indigo-600 hover:underline"
+                className="text-xs text-indigo-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded"
               >
                 Close
               </button>
@@ -181,6 +220,27 @@ export default function ProjectDashboard({
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Team</h2>
           <TeamMemberStatus members={enrichedMembers} />
         </section>
+      </div>
+      </div>{/* end main content */}
+
+      {/* ── Invite modal ── */}
+      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
+
+      {/* ── Chat panel ── */}
+      <div
+        className={`flex-shrink-0 border-l border-gray-200 bg-white overflow-hidden transition-all duration-300 ease-in-out ${
+          chatOpen ? "w-[30rem]" : "w-0"
+        }`}
+      >
+        <div className="w-[30rem] h-full flex flex-col">
+          <ChatPanel
+            projectId={projectId}
+            threadId={threadId}
+            initialMessages={initialMessages}
+            userName={userName}
+            onClose={() => setChatOpen(false)}
+          />
+        </div>
       </div>
     </div>
   );

@@ -73,7 +73,7 @@ export async function buildMemberChatSystemPrompt(
   const risksText =
     risks.length === 0
       ? ''
-      : `\n## Active Risk Flags\n${risks
+      : `\n## Active Risk Flags\nSurface these when relevant — after a task update, when the user asks about project health, or when recommending what to work on next.\n${risks
           .map((r) => {
             const dateStr =
               r.targetDate instanceof Date
@@ -84,12 +84,14 @@ export async function buildMemberChatSystemPrompt(
           .join('\n')}`
 
   const projectStateBlock = `## Current Project State
+**AUTHORITATIVE — always use these task IDs and statuses. Never infer task status from conversation history. The state below is fresher than any prior message.**
+
 Project: ${project.name} [${project.status}]
 
 ### Milestones
 ${milestonesText}
 
-### Tasks (include task ID when calling proposeTaskUpdate)
+### Tasks (include task ID when calling proposeTaskUpdate or reportBlocker)
 ${tasksText}${risksText}`
 
   // ─── Personal context block ───────────────────────────────────────────────
@@ -129,10 +131,15 @@ Resolve this before proposing anything new.`
     personalBlock,
     `## Available Tools
 - \`proposeTaskUpdate(taskId, newStatus, reason?)\`: Propose a status change. Shows user a confirmation before writing.
-- \`confirmTaskUpdate(confirmed)\`: Execute or cancel the pending proposal.
-- \`reportBlocker(taskId, blockerDescription)\`: Flag a task as blocked.
+- \`confirmTaskUpdate(confirmed)\`: Execute or cancel the pending proposal. MUST be called after user confirms — never skip this.
+- \`reportBlocker(taskId, blockerDescription)\`: Flag a task as blocked. Call this whenever a user reports being blocked, regardless of what earlier messages say. Use the task ID from Current Project State above.
 - \`getMyTasks()\`: Fetch latest tasks assigned to this user.
 - \`getRecommendation()\`: Get a ranked next-action recommendation.
+
+## Tool Usage Rules
+- ALWAYS use a tool to write state changes — never just say "done" or "marked as X" without calling the tool.
+- ALWAYS call \`confirmTaskUpdate({ confirmed: true })\` after the user confirms a proposal. Do not re-propose.
+- ALWAYS use task IDs from Current Project State above, not from conversation history.
 
 ## Today's Date
 ${today}`,

@@ -216,9 +216,6 @@ function buildSamplePlan(): ProjectPlan {
         ],
       },
     ],
-    openRisks: ['Timeline may slip'],
-    nextDiscoveryQuestions: [],
-    confidence: 0.8,
   }
 }
 
@@ -361,9 +358,6 @@ describe('Plan approval — edge cases', () => {
           ],
         },
       ],
-      openRisks: [],
-      nextDiscoveryQuestions: [],
-      confidence: 0.9,
     }
 
     const project = await createDraftProject(team.id, plan)

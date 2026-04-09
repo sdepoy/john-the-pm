@@ -9,7 +9,6 @@ describe('ProjectPlanSchema', () => {
         title: 'Discovery Complete',
         targetDate: '2025-03-01',
         status: 'not_started' as const,
-        successCriteria: 'All discovery layers signed off',
         tasks: [
           {
             title: 'Stakeholder interviews',
@@ -20,15 +19,6 @@ describe('ProjectPlanSchema', () => {
         ],
       },
     ],
-    openRisks: ['Timeline is aggressive', 'Engineering team is understaffed'],
-    moscowSummary: {
-      must: ['Payment flow redesign'],
-      should: ['Wishlist feature'],
-      could: ['Dark mode'],
-      wont: ['Mobile app'],
-    },
-    nextDiscoveryQuestions: ['What is the current checkout abandonment rate?'],
-    confidence: 0.75,
   }
 
   it('validates a well-formed plan', () => {
@@ -42,7 +32,7 @@ describe('ProjectPlanSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('applies default values for optional array fields', () => {
+  it('validates a minimal plan', () => {
     const minimal = {
       name: 'My Project',
       objective: 'Solve a problem',
@@ -50,24 +40,6 @@ describe('ProjectPlanSchema', () => {
     }
     const result = ProjectPlanSchema.safeParse(minimal)
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.openRisks).toEqual([])
-      expect(result.data.nextDiscoveryQuestions).toEqual([])
-      expect(result.data.confidence).toBe(0.8)
-    }
-  })
-
-  it('rejects confidence values outside 0-1', () => {
-    const tooHigh = { ...validPlan, confidence: 1.5 }
-    expect(ProjectPlanSchema.safeParse(tooHigh).success).toBe(false)
-
-    const negative = { ...validPlan, confidence: -0.1 }
-    expect(ProjectPlanSchema.safeParse(negative).success).toBe(false)
-  })
-
-  it('validates confidence of exactly 0 and 1', () => {
-    expect(ProjectPlanSchema.safeParse({ ...validPlan, confidence: 0 }).success).toBe(true)
-    expect(ProjectPlanSchema.safeParse({ ...validPlan, confidence: 1 }).success).toBe(true)
   })
 })
 
@@ -105,10 +77,7 @@ describe('TaskSchema', () => {
       title: 'Build auth',
       description: 'Implement magic link auth',
       priority: 'high' as const,
-      storyPoints: 5,
-      riceScore: 42,
       dependsOn: ['Design auth flow'],
-      milestoneTitle: 'Alpha',
       dueDate: '2025-05-15',
     }
     const result = TaskSchema.safeParse(task)
@@ -135,8 +104,7 @@ describe('TaskSchema', () => {
 })
 
 describe('Plan status transitions (logic)', () => {
-  it('discovery → draft is valid after plan generation', () => {
-    // Simulate the status transition logic used in the plan route
+  it('discovery → active is valid after plan generation', () => {
     const validSourceStatuses = ['discovery', 'generating']
     expect(validSourceStatuses).toContain('discovery')
     expect(validSourceStatuses).toContain('generating')

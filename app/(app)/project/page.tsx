@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ProjectDashboard from "./ProjectDashboard";
 import type { ProjectState } from "@/hooks/useProjectStream";
+import type { UIMessage } from "ai";
 
 export default async function ProjectPage() {
   const session = await auth();
@@ -141,12 +142,43 @@ export default async function ProjectPage() {
   };
 
   const isAdmin = session.user.teamRole === "admin";
+  const userId = session.user.id;
+
+  // Fetch or create thread for member chat panel
+  let thread = await prisma.thread.findUnique({
+    where: { projectId_userId: { projectId: fullProject.id, userId } },
+  });
+  if (!thread) {
+    thread = await prisma.thread.create({
+      data: { projectId: fullProject.id, userId },
+    });
+  }
+
+  const dbMessages = (await prisma.message.findMany({
+    where: { threadId: thread.id, summarized: false },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  })).reverse();
+
+  const initialMessages: UIMessage[] = dbMessages.map((msg) => ({
+    id: msg.id,
+    role: msg.role as "user" | "assistant",
+    parts: (Array.isArray(msg.content)
+      ? (msg.content as Array<{ type: string; text?: string }>)
+          .filter((p) => p.type === "text")
+          .map((p) => ({ type: "text" as const, text: p.text ?? "" }))
+      : []) as UIMessage["parts"],
+    createdAt: msg.createdAt,
+  }));
 
   return (
     <ProjectDashboard
       projectId={project.id}
       initialData={initialData}
       isAdmin={isAdmin}
+      threadId={thread.id}
+      initialMessages={initialMessages}
+      userName={session.user.name ?? session.user.email ?? "Team member"}
     />
   );
 }

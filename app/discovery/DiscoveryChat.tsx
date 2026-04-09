@@ -39,21 +39,43 @@ function MessageBubble({ message }: { message: UIMessage }) {
   )
 }
 
-function GeneratingOverlay() {
+function GeneratingOverlay({ onReset }: { onReset: () => void }) {
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 45000)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg">
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 mb-3">
-          {['-0.3s', '-0.15s', '0s'].map((d) => (
-            <div
-              key={d}
-              className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-bounce"
-              style={{ animationDelay: d }}
-            />
-          ))}
-        </div>
-        <p className="text-base font-semibold text-gray-800">Generating your project plan…</p>
-        <p className="text-sm text-gray-500 mt-1">This usually takes 10–20 seconds.</p>
+        {!timedOut ? (
+          <>
+            <div className="inline-flex items-center gap-2 mb-3">
+              {['-0.3s', '-0.15s', '0s'].map((d) => (
+                <div
+                  key={d}
+                  className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-bounce"
+                  style={{ animationDelay: d }}
+                />
+              ))}
+            </div>
+            <p className="text-base font-semibold text-gray-800">Generating your project plan…</p>
+            <p className="text-sm text-gray-500 mt-1">This usually takes 10–20 seconds.</p>
+          </>
+        ) : (
+          <>
+            <p className="text-base font-semibold text-gray-800 mb-1">Taking longer than expected.</p>
+            <p className="text-sm text-gray-500 mb-4">Something may have gone wrong.</p>
+            <button
+              onClick={onReset}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
+            >
+              Start over
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -115,6 +137,15 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
     return () => clearInterval(interval)
   }, [isGeneratingPlan, projectId, router])
 
+  const handleReset = async () => {
+    try {
+      await fetch(`/api/projects/${projectId}/reset`, { method: 'POST' })
+    } catch {
+      // ignore
+    }
+    router.refresh()
+  }
+
   const handleSend = () => {
     const text = inputValue.trim()
     if (!text || status === 'streaming') return
@@ -148,7 +179,7 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
 
       {/* ── Center: chat ───────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 relative">
-        {isGeneratingPlan && <GeneratingOverlay />}
+        {isGeneratingPlan && <GeneratingOverlay onReset={handleReset} />}
 
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center gap-3 flex-shrink-0">
@@ -170,8 +201,8 @@ export default function DiscoveryChat({ projectId, threadId }: DiscoveryChatProp
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-lg font-bold mb-3">J</div>
-                <p className="text-gray-700 font-medium">Hi, I'm John — your AI PM.</p>
-                <p className="text-gray-400 text-sm mt-1 max-w-sm">Tell me what you want to build and I'll turn it into a project plan.</p>
+                <p className="text-gray-700 font-medium">John is ready.</p>
+                <p className="text-gray-400 text-sm mt-1 max-w-sm">Describe what you want to build.</p>
               </div>
             )}
             {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}

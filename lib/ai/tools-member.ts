@@ -30,7 +30,7 @@ export function buildMemberTools(userId: string, projectId: string, threadId: st
           return { success: false, error: `Task ${taskId} not found.` }
         }
 
-        if (task.assigneeId !== userId) {
+        if (task.assigneeId !== null && task.assigneeId !== userId) {
           const assigneeName = task.assignee?.name ?? task.assignee?.email ?? 'another team member'
           return {
             success: false,
@@ -112,6 +112,13 @@ export function buildMemberTools(userId: string, projectId: string, threadId: st
             version: { increment: 1 },
           }
           if (newPriority) updateData.priority = newPriority
+          // Auto-assign to current user when claiming an unassigned task
+          if (
+            (newStatus === 'assigned' || newStatus === 'in_progress') &&
+            task.assigneeId === null
+          ) {
+            updateData.assigneeId = userId
+          }
 
           const updated = await prisma.task.updateMany({
             where: { id: taskId, version: task.version },
@@ -170,7 +177,7 @@ export function buildMemberTools(userId: string, projectId: string, threadId: st
           return { success: false, error: `Task ${taskId} not found.` }
         }
 
-        if (task.assigneeId !== userId) {
+        if (task.assigneeId !== null && task.assigneeId !== userId) {
           return {
             success: false,
             error: `Task "${task.title}" is not assigned to you.`,
@@ -256,6 +263,8 @@ async function confirmBlocker(
   const taskId = proposal.taskId as string
   const blockerDescription = proposal.blockerDescription as string
 
+  console.log(`[confirmBlocker] writing blocked status for task ${taskId}`)
+
   let retries = 0
   while (retries < 3) {
     const task = await prisma.task.findUnique({ where: { id: taskId } })
@@ -263,10 +272,15 @@ async function confirmBlocker(
 
     const updated = await prisma.task.updateMany({
       where: { id: taskId, version: task.version },
-      data: { status: 'blocked', version: { increment: 1 } },
+      data: {
+        status: 'blocked',
+        blockerNote: blockerDescription,
+        version: { increment: 1 },
+      },
     })
 
     if (updated.count > 0) {
+      console.log(`[confirmBlocker] task ${taskId} marked blocked, touching project ${projectId}`)
       // Touch projects table to fire pg_notify
       await prisma.project.update({
         where: { id: projectId },

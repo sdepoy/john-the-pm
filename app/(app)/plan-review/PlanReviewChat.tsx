@@ -64,11 +64,6 @@ function PlanPanel({ plan }: { plan: ProjectPlan | null }) {
       <div>
         <h2 className="text-lg font-bold text-gray-900">{plan.name}</h2>
         <p className="text-sm text-gray-600 mt-1">{plan.objective}</p>
-        {plan.confidence !== undefined && (
-          <span className="inline-block mt-2 text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">
-            {Math.round(plan.confidence * 100)}% confidence
-          </span>
-        )}
       </div>
 
       {/* Milestones */}
@@ -124,16 +119,12 @@ function PlanPanel({ plan }: { plan: ProjectPlan | null }) {
         </div>
       </div>
 
-      {/* Risks */}
-      {plan.openRisks && plan.openRisks.length > 0 && (
+      {/* Risks placeholder removed — risks surfaced through John chat */}
+      {false && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
-            Open Risks
-          </h3>
           <ul className="space-y-1">
-            {plan.openRisks.map((risk, i) => (
+            {[].map((risk, i) => (
               <li key={i} className="text-xs text-gray-600 flex gap-2">
-                <span className="text-yellow-500 flex-shrink-0">!</span>
                 {risk}
               </li>
             ))}

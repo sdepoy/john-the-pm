@@ -93,6 +93,12 @@ Today's date is ${new Date().toISOString().split('T')[0]}.`,
       },
     })
 
+    // Clear discovery messages from all threads so member chat starts clean
+    const threads = await tx.thread.findMany({ where: { projectId } })
+    for (const thread of threads) {
+      await tx.message.deleteMany({ where: { threadId: thread.id } })
+    }
+
     // Create milestones
     const createdMilestones = await Promise.all(
       plan.milestones.map((m) =>

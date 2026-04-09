@@ -106,6 +106,7 @@ export async function POST(req: Request) {
 
   // ─── Member-chat mode ──────────────────────────────────────────────────────
   if (mode === 'member-chat') {
+    console.log(`[chat:member] request — user="${userId}" msg="${userMessageText.slice(0, 60)}"`)
     // Handle abandoned proposal: if pending proposal exists and message is not a confirmation, clear it
     const currentThread = await prisma.thread.findUnique({
       where: { id: threadId },
@@ -113,18 +114,25 @@ export async function POST(req: Request) {
     })
 
     let systemInjection = ''
-    if (currentThread?.pendingProposal != null && !isConfirmation(userMessageText)) {
-      // Clear the abandoned proposal
-      await prisma.thread.update({
-        where: { id: threadId },
-        data: { pendingProposal: Prisma.DbNull },
-      })
-      systemInjection =
-        '\n\n[SYSTEM NOTE: The previous pending proposal has been cancelled because the user sent a non-confirmation message. Acknowledge this briefly and move on.]'
+    if (currentThread?.pendingProposal != null) {
+      if (isConfirmation(userMessageText)) {
+        // User confirmed — instruct John to execute the write immediately
+        systemInjection =
+          '\n\n[SYSTEM NOTE: The user just confirmed the pending proposal. You MUST call confirmTaskUpdate({ confirmed: true }) right now to execute the write. Do not re-propose. Do not ask again.]'
+      } else {
+        // User did not confirm — clear the proposal
+        await prisma.thread.update({
+          where: { id: threadId },
+          data: { pendingProposal: Prisma.DbNull },
+        })
+        systemInjection =
+          '\n\n[SYSTEM NOTE: The previous pending proposal has been cancelled because the user sent a non-confirmation message. Acknowledge this briefly and move on.]'
+      }
     }
 
     const memberContext = await buildMemberContext(threadId, projectId, userId)
     const memberTools = buildMemberTools(userId, projectId, threadId)
+    console.log(`[chat:member] context messages=${memberContext.messages.length} injection="${systemInjection.slice(0, 80)}"`)
 
     const memberResult = streamText({
       model: anthropic('claude-sonnet-4-6'),
@@ -137,6 +145,11 @@ export async function POST(req: Request) {
       ],
       tools: memberTools,
       stopWhen: stepCountIs(5),
+      onStepFinish: (step) => {
+        if (step.toolCalls?.length) {
+          console.log('[chat:member] tools called:', step.toolCalls.map((tc) => tc.toolName))
+        }
+      },
       onFinish: async (event) => {
         try {
           if (userMessageText && lastIncoming) {
@@ -215,6 +228,33 @@ export async function POST(req: Request) {
     messages: messagesForModel,
     tools,
     stopWhen: stepCountIs(5),
+    onStepFinish: async (step) => {
+      // Detect proposePlanGeneration in this step — more reliable than onFinish
+      const triggered = step.toolCalls?.some((tc) => tc.toolName === 'proposePlanGeneration')
+      if (triggered && !planGenerationTriggered) {
+        planGenerationTriggered = true
+        console.log('[chat] proposePlanGeneration detected — firing plan generation')
+        fetch(
+          `${process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000'}/api/projects/${projectId}/plan`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Cookie: req.headers.get('cookie') ?? '',
+            },
+          },
+        ).then(async (r) => {
+          if (!r.ok) {
+            const body = await r.text()
+            console.error(`[chat] plan generation failed: ${r.status} ${body}`)
+          } else {
+            console.log('[chat] plan generation succeeded')
+          }
+        }).catch((err) => {
+          console.error('[chat] plan generation fetch error:', err)
+        })
+      }
+    },
     onFinish: async (event) => {
       try {
         // Persist user message
@@ -237,37 +277,6 @@ export async function POST(req: Request) {
               role: 'assistant',
               content: assistantContent as unknown as object[],
             },
-          })
-        }
-
-        // Check if proposePlanGeneration was called
-        console.log('[chat] onFinish toolCalls:', JSON.stringify(event.toolCalls?.map(tc => tc.toolName)))
-
-        const hadPlanProposal = event.toolCalls?.some(
-          (tc) => tc.toolName === 'proposePlanGeneration',
-        )
-
-        if (hadPlanProposal && !planGenerationTriggered) {
-          planGenerationTriggered = true
-          // Fire-and-forget plan generation
-          fetch(
-            `${process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000'}/api/projects/${projectId}/plan`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Cookie: req.headers.get('cookie') ?? '',
-              },
-            },
-          ).then(async (r) => {
-            if (!r.ok) {
-              const body = await r.text()
-              console.error(`[chat] plan generation failed: ${r.status} ${body}`)
-            } else {
-              console.log('[chat] plan generation succeeded')
-            }
-          }).catch((err) => {
-            console.error('[chat] plan generation fetch error:', err)
           })
         }
       } catch (err) {

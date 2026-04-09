@@ -88,7 +88,7 @@ export async function POST(request: Request) {
 
   const resend = new Resend(resendKey);
   const { error: emailError } = await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "John the PM <noreply@johnthepm.app>",
+    from: process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev",
     to: [email],
     subject: `You've been invited to join ${team.name} on John the PM`,
     html: `
@@ -106,15 +106,15 @@ export async function POST(request: Request) {
   });
 
   if (emailError) {
-    // Clean up the invitation since email failed
-    await prisma.invitation.delete({ where: { id: invitation.id } });
+    console.error("[invitations] Resend error:", JSON.stringify(emailError));
+    // Email failed — invitation still valid, return the link so admin can share manually
     return NextResponse.json(
-      { error: "Failed to send invitation email. Please try again." },
-      { status: 503 }
+      { invitation: { id: invitation.id, email, expiresAt }, inviteLink, emailSent: false },
+      { status: 201 }
     );
   }
 
-  return NextResponse.json({ invitation: { id: invitation.id, email, expiresAt } }, { status: 201 });
+  return NextResponse.json({ invitation: { id: invitation.id, email, expiresAt }, inviteLink, emailSent: true }, { status: 201 });
 }
 
 export async function GET() {

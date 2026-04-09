@@ -16,7 +16,7 @@ export function buildDiscoverySystemPrompt(): string {
     EXAMPLE_PLAN,
     SKILL_DISCOVERY,
     `## Available Tools
-- \`proposePlanGeneration\`: Call this immediately after the user answers "What are you building?"
+- \`proposePlanGeneration(confirmedDescription)\`: Call ONLY after the user explicitly confirms your one-sentence summary. Not before.
 
 ## Today's Date
 ${today}`,

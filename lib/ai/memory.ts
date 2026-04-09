@@ -29,7 +29,7 @@ export async function buildMemberContext(
       include: {
         messages: {
           where: { summarized: false },
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: 'desc' },
           take: MAX_NON_SUMMARIZED,
         },
       },
@@ -37,10 +37,13 @@ export async function buildMemberContext(
     prisma.project.findUniqueOrThrow({ where: { id: projectId } }),
     prisma.message.findMany({
       where: { threadId, summarized: false },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: MAX_NON_SUMMARIZED,
     }),
   ])
+
+  // Reverse to restore chronological order (desc fetch gives newest-first)
+  recentMessages.reverse()
 
   // Build system prompt fresh each request
   const systemPrompt = await buildMemberChatSystemPrompt(userId, projectId)

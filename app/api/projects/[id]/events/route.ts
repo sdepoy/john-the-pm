@@ -70,17 +70,38 @@ export async function GET(
   }
 
   // 4. Create a per-connection pg.Client (NOT a module-level singleton)
-  const pgClient = new Client({ connectionString: process.env.DATABASE_URL });
+  // IMPORTANT: Must use a direct (non-pooled) connection — PgBouncer/Neon pooler
+  // silently drops LISTEN/NOTIFY. Use DATABASE_URL_DIRECT if set, otherwise
+  // derive the direct URL by stripping the "-pooler" suffix from the hostname.
+  const rawUrl = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL ?? "";
+  const directUrl = rawUrl.replace(/-pooler(\.\S)/g, "$1");
+  console.log(`[events] connecting to: ${directUrl.replace(/:\/\/[^@]+@/, "://***@")}`);
+  const pgClient = new Client({ connectionString: directUrl });
+
+  // Attach error handler BEFORE connect() to avoid uncaughtException if
+  // Neon terminates the connection before the ReadableStream start() runs.
+  let streamController: ReadableStreamDefaultController | null = null;
+  pgClient.on("error", (err) => {
+    console.log(`[events] pg connection error, closing stream:`, err.message);
+    if (streamController) {
+      try { streamController.close(); } catch { /* already closed */ }
+    }
+    pgClient.end().catch(() => {});
+  });
+
   await pgClient.connect();
 
   // 5. LISTEN on the channel for this project (double-quoted for UUID safety)
-  await pgClient.query(`LISTEN "project_${id}"`);
+  const channel = `project_${id}`;
+  await pgClient.query(`LISTEN "${channel}"`);
+  console.log(`[events] LISTEN on channel: ${channel}`);
 
   const encoder = new TextEncoder();
 
   // 6. Create a ReadableStream
   const stream = new ReadableStream({
     start(controller) {
+      streamController = controller;
       // Send initial snapshot event
       const snapshotPayload = {
         type: "snapshot",
@@ -144,6 +165,7 @@ export async function GET(
 
       // Listen for pg notifications
       pgClient.on("notification", (msg) => {
+        console.log(`[events] notification received on channel ${msg.channel}:`, msg.payload);
         try {
           const payload = msg.payload ? JSON.parse(msg.payload) : {};
           controller.enqueue(

@@ -108,6 +108,8 @@ model Task {
   // Task IDs this task depends on (must be complete before this task is actionable)
   dependsOn   String[]  @default([])
   dueDate     DateTime?
+  // Set when status = "blocked"
+  blockerNote String?
   // Optimistic locking for task status updates
   version     Int       @default(1)
 
