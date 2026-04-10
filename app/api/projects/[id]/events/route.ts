@@ -4,7 +4,7 @@ import { Client } from "pg";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 function sseEvent(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
