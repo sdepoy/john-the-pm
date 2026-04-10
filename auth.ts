@@ -6,6 +6,7 @@ import type { PrismaClient } from "@/app/generated/prisma/client";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma as unknown as PrismaClient),
+  trustHost: true,
   session: {
     strategy: "database",
   },
